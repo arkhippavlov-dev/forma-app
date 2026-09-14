@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0A0C0F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FORMA — AI-анализ техники</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="phone">
+
+  <!-- ================= ONBOARDING: INTRO ================= -->
+  <section class="screen active" id="s-intro">
+    <div class="scroll" style="padding-top:60px; display:flex; flex-direction:column; height:100%;">
+      <div class="hero-badge">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.4" stroke="#fff" stroke-width="1.6"/><path d="M12 8v6M12 14l-4 6M12 14l4 6M7 11l5-1 5 1" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brandmark" style="font-size:14px; color:var(--text-dim); margin-bottom:14px;">FOR<b>MA</b></div>
+      <h2 class="title">Персональный AI-тренер по технике</h2>
+      <p class="sub">FORMA смотрит на твоё движение через камеру телефона, строит скелетную модель тела и показывает, где именно ошибка в технике — и как её исправить.</p>
+      <div class="stack" style="margin-top:auto; margin-bottom:8px;">
+        <div class="checklist-item"><div class="dot">1</div><div><b>Профиль тела</b><span>Один раз — чтобы анализ учитывал именно твои пропорции</span></div></div>
+        <div class="checklist-item"><div class="dot">2</div><div><b>Запись подхода</b><span>Приложение само подскажет, как поставить камеру</span></div></div>
+        <div class="checklist-item"><div class="dot">3</div><div><b>Разбор техники</b><span>Скелет поверх видео + конкретные ошибки и правки</span></div></div>
+      </div>
+      <button class="btn btn-primary" onclick="go('s-consent')" style="margin-top:14px;">Создать профиль</button>
+    </div>
+  </section>
+
+  <!-- ================= ONBOARDING: CONSENT / SAFETY ================= -->
+  <section class="screen" id="s-consent">
+    <div class="topbar"><div class="backbtn" onclick="go('s-intro')">‹</div><h1>О безопасности</h1></div>
+    <div class="scroll">
+      <p class="sub" style="margin-top:6px;">Прежде чем начать, важное:</p>
+      <div class="card stack" style="margin-bottom:14px;">
+        <div style="font-size:13.5px; line-height:1.6;">FORMA анализирует <b>технику и биомеханику движения</b> — это не медицинский инструмент и не ставит диагнозы. Приложение никогда не скажет «у вас травма» — вместо этого оно опишет наблюдаемую особенность движения, например асимметрию или отклонение от траектории.</div>
+      </div>
+      <div class="card stack">
+        <div style="font-size:13.5px; line-height:1.6; color:var(--text-dim);">Если во время упражнения ты чувствуешь боль или дискомфорт — немедленно останови подход и обратись к врачу или квалифицированному специалисту.</div>
+      </div>
+    </div>
+    <div class="screen-cta"><button class="btn btn-primary" onclick="go('s-capture')">Понятно, продолжить</button></div>
+  </section>
+
+  <!-- ================= ONBOARDING: CAPTURE ================= -->
+  <section class="screen" id="s-capture">
+    <div class="topbar"><div class="backbtn" onclick="go('s-consent')">‹</div><h1>Физический профиль</h1></div>
+    <div class="scroll">
+      <div class="step-dots"><span class="on"></span><span class="on"></span><span></span></div>
+      <p class="sub" style="margin-bottom:16px;">Сними себя в полный рост спереди — по этому кадру FORMA оценит пропорции тела для персонализации анализа.</p>
+      <div class="camview" id="capview">
+        <video id="capvideo" class="mirror" autoplay playsinline webkit-playsinline muted></video>
+        <canvas id="capcanvas"></canvas>
+        <div class="noperm" id="capnoperm" style="display:none;">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#565D69" stroke-width="1.5"><path d="M15 8l-6 8M9 8l6 8" stroke-linecap="round"/><circle cx="12" cy="12" r="10"/></svg>
+          <div>Нет доступа к камере.<br>Можно продолжить с примерными данными.</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;" class="stack">
+        <div class="checklist-item"><div class="dot">✓</div><div><b>Полный рост в кадре</b><span>Голова и стопы должны быть видны целиком</span></div></div>
+        <div class="checklist-item"><div class="dot">✓</div><div><b>Нейтральный фон и свет</b><span>Без объёмной одежды, по возможности</span></div></div>
+        <div class="checklist-item"><div class="dot">✓</div><div><b>Естественная стойка</b><span>Встань прямо, руки свободно вдоль тела</span></div></div>
+      </div>
+    </div>
+    <div class="screen-cta"><button class="btn btn-primary" id="captureBtn" onclick="captureProfilePhoto()">Снять кадр</button></div>
+  </section>
+
+  <!-- ================= ONBOARDING: ANTHROPOMETRY RESULT ================= -->
+  <section class="screen" id="s-anthro">
+    <div class="topbar"><div class="backbtn" onclick="go('s-capture')">‹</div><h1>Биомеханический профиль</h1></div>
+    <div class="scroll">
+      <div class="step-dots"><span class="on"></span><span class="on"></span><span class="on"></span></div>
+      <div class="card" style="margin-bottom:16px;">
+        <label class="field-label">Рост, см</label>
+        <input type="number" id="heightInput" placeholder="Например, 178" oninput="recalcAnthro()">
+      </div>
+      <div id="anthroResults" style="display:none;">
+        <div class="card stack" style="margin-bottom:14px;">
+          <div style="font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-faint); font-weight:700;">Определено по кадру</div>
+          <div id="anthroList" class="stack"></div>
+        </div>
+        <div class="quotebox">Это не медицинское заключение — только особенности пропорций и стойки, которые FORMA будет учитывать при оценке твоей техники.</div>
+      </div>
+    </div>
+    <div class="screen-cta"><button class="btn btn-primary" id="finishOnboardBtn" onclick="finishOnboarding()" disabled>Создать профиль</button></div>
+  </section>
+
+  <!-- ================= HOME ================= -->
+  <section class="screen" id="s-home">
+    <div class="home-hero">
+      <div class="brandmark" style="font-size:12px; color:var(--text-faint); margin-bottom:10px;">FOR<b>MA</b></div>
+      <div class="greet" id="homeGreet">Привет 👋</div>
+      <div class="greet-sub">Сегодня тренируем:</div>
+    </div>
+    <div class="scroll" style="padding-top:4px;">
+      <button class="btn btn-primary" style="margin:14px 0 4px;" onclick="go('s-exselect')">+ Добавить упражнение</button>
+
+      <div class="progress-strip">
+        <div><div class="num" id="progressNum">+0%</div><div class="lbl">качество техники за месяц</div></div>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7C6CFF" stroke-width="2"><path d="M4 15l5-6 4 4 7-9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+
+      <div class="section-lbl">Последние анализы</div>
+      <div class="exlist" id="recentList"></div>
+
+      <div class="section-lbl">Прогресс по упражнениям</div>
+      <div class="exlist" id="historyEntry" style="margin-bottom:14px;"></div>
+    </div>
+  </section>
+
+  <!-- ================= EXERCISE LIBRARY / SELECT ================= -->
+  <section class="screen" id="s-exselect">
+    <div class="topbar"><div class="backbtn" onclick="go('s-home')">‹</div><h1>Библиотека упражнений</h1></div>
+    <div class="scroll">
+      <div class="searchbox">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#565D69" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+        <input type="text" id="exSearchInput" placeholder="Введите название упражнения" oninput="onExerciseSearch()">
+      </div>
+      <p class="sub" style="margin-bottom:14px;">Для каждого упражнения — своя модель анализа техники.</p>
+      <div class="exgrid" id="exSelectList"></div>
+      <div id="exSearchEmpty" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- ================= CAMERA SETUP ================= -->
+  <section class="screen" id="s-setup">
+    <div class="topbar"><div class="backbtn" onclick="go('s-exselect')">‹</div><h1 id="setupTitle">Настройка камеры</h1></div>
+    <div class="scroll">
+      <div class="quotebox" id="setupQuote"></div>
+      <div class="angle-diagram"><svg id="angleSvg" width="140" height="140" viewBox="0 0 140 140"></svg></div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="setup-item"><div class="n">01</div><div><b>Расстояние</b><span id="setupDist"></span></div></div>
+        <div class="setup-item"><div class="n">02</div><div><b>Высота камеры</b><span id="setupHeight"></span></div></div>
+        <div class="setup-item"><div class="n">03</div><div><b>Что должно быть видно</b><span id="setupVisible"></span></div></div>
+      </div>
+    </div>
+    <div class="screen-cta"><button class="btn btn-primary" onclick="startCheckScreen()">Готово, включить камеру</button></div>
+  </section>
+
+  <!-- ================= FRAME CHECK ================= -->
+  <section class="screen" id="s-check">
+    <div class="topbar"><div class="backbtn" onclick="go('s-setup')">‹</div><h1>Проверка кадра</h1></div>
+    <div class="scroll">
+      <div class="camview" style="margin-bottom:18px;">
+        <video id="checkvideo" autoplay playsinline webkit-playsinline muted></video>
+        <div class="noperm" id="checknoperm" style="display:none;">Нет доступа к камере — можно продолжить в демо‑режиме.</div>
+      </div>
+      <div class="card">
+        <div class="checkrow" id="chk1"><div class="chk"></div>Всё тело в кадре</div>
+        <div class="checkrow" id="chk2"><div class="chk"></div>Хорошее освещение</div>
+        <div class="checkrow" id="chk3"><div class="chk"></div>Камера неподвижна</div>
+        <div class="checkrow" id="chk4"><div class="chk"></div>Ракурс подходит для анализа</div>
+        <div class="checkrow" id="chk5"><div class="chk"></div>Можно начинать</div>
+      </div>
+    </div>
+    <div class="screen-cta"><button class="btn btn-primary" id="beginAnalysisBtn" onclick="startRecording()" disabled>Начать анализ</button></div>
+  </section>
+
+  <!-- ================= RECORDING ================= -->
+  <section class="screen" id="s-record">
+    <div class="camview" style="flex:1; border-radius:0; border:none; aspect-ratio:auto;">
+      <video id="recvideo" autoplay playsinline webkit-playsinline muted></video>
+      <canvas id="reccanvas"></canvas>
+      <div class="noperm" id="recnoperm" style="display:none;"></div>
+      <div class="badge-demo">MOCKPOSEESTIMATIONSERVICE · ДЕМО-АНАЛИЗ</div>
+      <div class="rec-hud">
+        <div class="rec-pill"><div class="rec-dot"></div><span id="recTimer">00:00</span></div>
+        <div class="rec-pill" id="recExName">—</div>
+      </div>
+      <div class="rep-badge"><div class="n" id="repCount">0</div><div class="l">повторений</div></div>
+    </div>
+    <div class="rec-controls">
+      <div class="rec-stopbtn" onclick="stopRecording()"><div class="sq"></div></div>
+    </div>
+  </section>
+
+  <!-- ================= ANALYZING ================= -->
+  <section class="screen" id="s-analyzing">
+    <div class="analyzing-wrap">
+      <div class="spinner"></div>
+      <div class="analyzing-step" id="analyzingStep">Pose Detection → Body Tracking…</div>
+      <div class="api-badge">POST /analyze-video</div>
+    </div>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section class="screen" id="s-results">
+    <div class="topbar"><div class="backbtn" onclick="go('s-home')">‹</div><h1 id="resultsTitle">Результат</h1></div>
+    <div class="scroll">
+      <div class="score-hero">
+        <div class="score-ring" id="scoreRing"><div class="num" id="scoreNum">0</div><div class="den">/ 100</div></div>
+        <div class="score-label" id="scoreLabel"></div>
+      </div>
+
+      <div class="section-lbl" style="margin-left:0;">Показатели</div>
+      <div class="card subscore-list" id="subscoreWrap"></div>
+
+      <div class="section-lbl" style="margin-left:0;">Обнаружено</div>
+      <div id="issuesWrap"></div>
+
+      <div class="section-lbl" style="margin-left:0;">Сильные стороны</div>
+      <div class="card stack" id="strengthsWrap"></div>
+
+      <div class="section-lbl" style="margin-left:0;">По повторениям</div>
+      <div class="rep-list" id="repList"></div>
+      <div style="font-size:12px; color:var(--text-faint); margin-top:10px; line-height:1.5;" id="fatigueNote"></div>
+
+      <div class="section-lbl" style="margin-left:0;">Лучшее vs худшее повторение</div>
+      <div class="compare-wrap" id="compareWrap"></div>
+
+      <button class="btn btn-ghost" style="margin-top:18px;" onclick="openCompareScreen()">Посмотреть оптимальную технику</button>
+
+      <div class="card" style="margin-top:16px; border-color:#7C6CFF44; background:var(--brand-dim);">
+        <div style="font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--brand); font-weight:700; margin-bottom:6px;">Главная рекомендация</div>
+        <div style="font-size:13.5px; line-height:1.55;" id="mainRecommendation"></div>
+      </div>
+
+      <button class="btn btn-ghost" style="margin-top:20px;" onclick="go('s-home')">Готово</button>
+    </div>
+  </section>
+
+  <!-- ================= OPTIMAL TECHNIQUE / COMPARE ================= -->
+  <section class="screen" id="s-compare">
+    <div class="topbar"><div class="backbtn" onclick="go('s-results')">‹</div><h1>Оптимальная техника</h1></div>
+    <div class="scroll">
+      <div class="mode-toggle">
+        <div class="mode-btn mine active" data-mode="mine" onclick="setCompareMode('mine')">Моя техника</div>
+        <div class="mode-btn optimal" data-mode="optimal" onclick="setCompareMode('optimal')">Оптимальная</div>
+        <div class="mode-btn compare" data-mode="compare" onclick="setCompareMode('compare')">Сравнить</div>
+      </div>
+      <div class="compare-player">
+        <canvas id="compareCanvas"></canvas>
+        <div class="rep-tag" id="compareRepTag">—</div>
+      </div>
+      <div class="legend-row" id="compareLegend"></div>
+      <p class="sub" style="margin-top:18px; font-size:13px;">Показано худшее повторение подхода — именно на нём заметнее всего разница между твоей траекторией и рекомендуемой.</p>
+    </div>
+  </section>
+
+  <!-- ================= REP DETAIL ================= -->
+  <section class="screen" id="s-repdetail">
+    <div class="topbar"><div class="backbtn" onclick="go('s-results')">‹</div><h1 id="repDetailTitle">Повторение</h1></div>
+    <div class="scroll" id="repDetailBody"></div>
+  </section>
+
+  <!-- ================= PROFILE ================= -->
+  <section class="screen" id="s-profile">
+    <div class="topbar"><div class="backbtn" onclick="go('s-home')">‹</div><h1>Профиль</h1></div>
+    <div class="scroll">
+      <div class="card stack" style="align-items:center; text-align:center;">
+        <img id="profileThumb" style="width:84px;height:84px;border-radius:20px;object-fit:cover;background:var(--surface-2);">
+        <div id="profileHeight" style="font-family:var(--font-mono); color:var(--text-dim); font-size:13px;"></div>
+      </div>
+      <div class="card stack" style="margin-top:14px;" id="profileAnthro"></div>
+      <button class="btn btn-danger-ghost" style="margin-top:22px;" onclick="resetApp()">Сбросить профиль и историю</button>
+    </div>
+  </section>
+
+  <!-- ================= TABBAR ================= -->
+  <div class="tabbar" id="tabbar" style="display:none;">
+    <div class="tabbtn active" data-tab="s-home" onclick="switchTab('s-home')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-6 8 6v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>
+      <span>Главная</span>
+    </div>
+    <div class="tabbtn" data-tab="s-historytab" onclick="switchTab('s-historytab')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+      <span>Прогресс</span>
+    </div>
+    <div class="tabbtn" data-tab="s-profile" onclick="switchTab('s-profile')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></svg>
+      <span>Профиль</span>
+    </div>
+  </div>
+
+  <!-- ================= HISTORY TAB ================= -->
+  <section class="screen" id="s-historytab">
+    <div class="topbar"><h1>Прогресс</h1></div>
+    <div class="scroll" id="historyTabBody"></div>
+  </section>
+
+</div>
+
+<script src="js/exercise-library.js"></script>
+<script src="js/pose-service.js"></script>
+<script src="js/biomechanics-engine.js"></script>
+<script src="js/analysis-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/skeleton-renderer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
