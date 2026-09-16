@@ -154,12 +154,7 @@ const PoseEstimationService = (function () {
       return null;
     }
 
-    // Не обрабатываем один и тот же кадр несколько раз
-    if (video.currentTime === lastVideoTime) {
-      return null;
-    }
-
-    lastVideoTime = video.currentTime;
+    
 
     const timestamp = performance.now();
 
