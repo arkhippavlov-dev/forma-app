@@ -1,71 +1,363 @@
-/* =====================================================================
-   SKELETON RENDERER
-   ---------------------------------------------------------------------
-   Draws the joint/segment overlay on a canvas. Two skeletons can be
-   drawn on the same canvas: the user's (colour-coded per body part —
-   🟢/🟡/🔴) and the "optimal technique" reference (single contrasting
-   colour, dashed), for the comparison mode in spec §11/§12.
-   ===================================================================== */
+/* ============================================================
+   FORMA — SKELETON RENDERER
+   V0.1
+   Real MediaPipe landmarks → canvas overlay
+   ============================================================ */
 
-const SkeletonRenderer = (function(){
+const SkeletonRenderer = (function () {
 
-  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-  function colorFor(sev){ return sev==='bad'? cssVar('--bad') : sev==='warn'? cssVar('--warn') : cssVar('--good'); }
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim();
+  }
 
+  function colorFor(severity) {
+    if (severity === 'bad') return cssVar('--bad');
+    if (severity === 'warn') return cssVar('--warn');
+    return cssVar('--good');
+  }
+
+  /*
+    MediaPipe body connections.
+
+    We deliberately don't draw every MediaPipe landmark yet.
+    For V0.1 we want a clean human skeleton.
+  */
   const SEGMENTS = [
-    ['neck','lshoulder','shoulders'], ['neck','rshoulder','shoulders'],
-    ['lshoulder','lhip','spine'], ['rshoulder','rhip','spine'],
-    ['lhip','rhip','hips'],
-    ['lshoulder','lelbow','leftElbow'], ['lelbow','lwrist','leftElbow'],
-    ['rshoulder','relbow','rightElbow'], ['relbow','rwrist','rightElbow'],
-    ['lhip','lknee','leftKnee'], ['lknee','lankle','leftKnee'],
-    ['rhip','rknee','rightKnee'], ['rknee','rankle','rightKnee'],
+    // shoulders
+    ['neck', 'lshoulder', 'shoulders'],
+    ['neck', 'rshoulder', 'shoulders'],
+
+    // torso
+    ['lshoulder', 'lhip', 'spine'],
+    ['rshoulder', 'rhip', 'spine'],
+    ['lhip', 'rhip', 'hips'],
+
+    // left arm
+    ['lshoulder', 'lelbow', 'leftElbow'],
+    ['lelbow', 'lwrist', 'leftWrist'],
+
+    // right arm
+    ['rshoulder', 'relbow', 'rightElbow'],
+    ['relbow', 'rwrist', 'rightWrist'],
+
+    // left leg
+    ['lhip', 'lknee', 'leftKnee'],
+    ['lknee', 'lankle', 'leftKnee'],
+
+    // right leg
+    ['rhip', 'rknee', 'rightKnee'],
+    ['rknee', 'rankle', 'rightKnee']
   ];
+
   const JOINT_PART = {
-    lelbow:'leftElbow', relbow:'rightElbow', lknee:'leftKnee', rknee:'rightKnee',
-    lwrist:'leftWrist', rwrist:'rightWrist', lshoulder:'shoulders', rshoulder:'shoulders',
-    lhip:'hips', rhip:'hips', lankle:'leftKnee', rankle:'rightKnee'
+    head: 'head',
+
+    lshoulder: 'shoulders',
+    rshoulder: 'shoulders',
+
+    lelbow: 'leftElbow',
+    relbow: 'rightElbow',
+
+    lwrist: 'leftWrist',
+    rwrist: 'rightWrist',
+
+    lhip: 'hips',
+    rhip: 'hips',
+
+    lknee: 'leftKnee',
+    rknee: 'rightKnee',
+
+    lankle: 'leftKnee',
+    rankle: 'rightKnee'
   };
 
-  function toPx(pose, w, h){
+
+  /*
+    Convert MediaPipe normalized coordinates:
+
+      x = 0..1
+      y = 0..1
+
+    into canvas pixels.
+
+    IMPORTANT:
+    We do NOT mirror here.
+
+    The video/canvas should use the same visual orientation.
+  */
+  function toPx(pose, w, h) {
+
     const P = {};
-    Object.keys(pose).forEach(k=>{ P[k] = [pose[k][0]*w, pose[k][1]*h]; });
+
+    Object.keys(pose || {}).forEach(key => {
+
+      const point = pose[key];
+
+      if (!point || point.length < 2) {
+        P[key] = null;
+        return;
+      }
+
+      P[key] = [
+        point[0] * w,
+        point[1] * h
+      ];
+    });
+
     return P;
   }
 
-  /** Colour-coded user skeleton — segColors: { partName: 'good'|'warn'|'bad' } */
-  function drawUser(ctx, w, h, pose, segColors){
-    const P = toPx(pose, w, h);
-    ctx.strokeStyle = cssVar('--text-dim'); ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(P.head[0], P.head[1], 14, 0, Math.PI*2); ctx.stroke();
 
-    SEGMENTS.forEach(([a,b,part])=>{
-      ctx.strokeStyle = colorFor((segColors||{})[part]); ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(...P[a]); ctx.lineTo(...P[b]); ctx.stroke();
-    });
-    Object.keys(JOINT_PART).forEach(j=>{
-      ctx.fillStyle = colorFor((segColors||{})[JOINT_PART[j]]);
-      ctx.beginPath(); ctx.arc(P[j][0], P[j][1], 5, 0, Math.PI*2); ctx.fill();
-    });
+  function validPoint(P, name) {
+    return (
+      P &&
+      P[name] &&
+      Number.isFinite(P[name][0]) &&
+      Number.isFinite(P[name][1])
+    );
   }
 
-  /** Single-colour dashed reference skeleton (the "optimal technique" overlay) */
-  function drawOptimal(ctx, w, h, pose){
-    const P = toPx(pose, w, h);
-    const c = cssVar('--optimal');
-    ctx.setLineDash([6,5]);
-    ctx.strokeStyle = c; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(P.head[0], P.head[1], 14, 0, Math.PI*2); ctx.stroke();
-    SEGMENTS.forEach(([a,b])=>{
-      ctx.beginPath(); ctx.moveTo(...P[a]); ctx.lineTo(...P[b]); ctx.stroke();
-    });
+
+  function drawLine(ctx, P, a, b, color, width) {
+
+    if (!validPoint(P, a) || !validPoint(P, b)) {
+      return;
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      P[a][0],
+      P[a][1]
+    );
+
+    ctx.lineTo(
+      P[b][0],
+      P[b][1]
+    );
+
+    ctx.stroke();
+  }
+
+
+  function drawJoint(ctx, point, color, radius) {
+
+    if (!point) return;
+
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      point[0],
+      point[1],
+      radius,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+  }
+
+
+  /*
+    Draw user's real skeleton.
+  */
+  function drawUser(
+    ctx,
+    w,
+    h,
+    pose,
+    segColors
+  ) {
+
+    if (!ctx || !pose) return;
+
+    const P = toPx(
+      pose,
+      w,
+      h
+    );
+
+    /*
+      Head
+    */
+    if (validPoint(P, 'head')) {
+
+      ctx.strokeStyle =
+        cssVar('--text-dim') || '#888';
+
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        P.head[0],
+        P.head[1],
+        12,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.stroke();
+    }
+
+
+    /*
+      Body segments
+    */
+    SEGMENTS.forEach(
+      ([a, b, part]) => {
+
+        const severity =
+          (segColors || {})[part] || 'good';
+
+        drawLine(
+          ctx,
+          P,
+          a,
+          b,
+          colorFor(severity),
+          5
+        );
+      }
+    );
+
+
+    /*
+      Joints
+    */
+    Object.keys(JOINT_PART).forEach(
+      joint => {
+
+        if (!validPoint(P, joint)) {
+          return;
+        }
+
+        const part =
+          JOINT_PART[joint];
+
+        const severity =
+          (segColors || {})[part] || 'good';
+
+        drawJoint(
+          ctx,
+          P[joint],
+          colorFor(severity),
+          5
+        );
+      }
+    );
+  }
+
+
+  /*
+    Draw reference / optimal skeleton.
+  */
+  function drawOptimal(
+    ctx,
+    w,
+    h,
+    pose
+  ) {
+
+    if (!ctx || !pose) return;
+
+    const P = toPx(
+      pose,
+      w,
+      h
+    );
+
+    const optimalColor =
+      cssVar('--optimal') || '#7C6CFF';
+
+
+    /*
+      Head
+    */
+    if (validPoint(P, 'head')) {
+
+      ctx.strokeStyle =
+        optimalColor;
+
+      ctx.lineWidth = 3;
+
+      ctx.setLineDash([6, 5]);
+
+      ctx.beginPath();
+
+      ctx.arc(
+        P.head[0],
+        P.head[1],
+        12,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.stroke();
+    }
+
+
+    /*
+      Reference skeleton
+    */
+    SEGMENTS.forEach(
+      ([a, b]) => {
+
+        drawLine(
+          ctx,
+          P,
+          a,
+          b,
+          optimalColor,
+          3
+        );
+      }
+    );
+
+
+    /*
+      Restore normal line mode.
+    */
     ctx.setLineDash([]);
-    Object.keys(JOINT_PART).forEach(j=>{
-      ctx.fillStyle = c; ctx.globalAlpha = 0.85;
-      ctx.beginPath(); ctx.arc(P[j][0], P[j][1], 4, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = 1;
-    });
+
+
+    /*
+      Reference joints
+    */
+    Object.keys(JOINT_PART).forEach(
+      joint => {
+
+        if (!validPoint(P, joint)) {
+          return;
+        }
+
+        ctx.globalAlpha = 0.85;
+
+        drawJoint(
+          ctx,
+          P[joint],
+          optimalColor,
+          4
+        );
+
+        ctx.globalAlpha = 1;
+      }
+    );
   }
 
-  return { drawUser, drawOptimal };
+
+  return {
+    drawUser,
+    drawOptimal
+  };
+
 })();
