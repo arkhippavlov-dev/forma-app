@@ -87,27 +87,55 @@ const SkeletonRenderer = (function () {
 
     The video/canvas should use the same visual orientation.
   */
-  function toPx(pose, w, h) {
+  function toPx(pose, w, h, videoW, videoH) {
 
-    const P = {};
+  const P = {};
 
-    Object.keys(pose || {}).forEach(key => {
-
-      const point = pose[key];
-
-      if (!point || point.length < 2) {
-        P[key] = null;
-        return;
-      }
-
-      P[key] = [
-        point[0] * w,
-        point[1] * h
-      ];
-    });
-
+  if (!videoW || !videoH) {
     return P;
   }
+
+  /*
+    The video is displayed with object-fit: cover.
+
+    MediaPipe coordinates are based on the real video frame.
+    Canvas coordinates are based on the visible cropped area.
+
+    We reproduce the same cover transformation here.
+  */
+
+  const scale = Math.max(
+    w / videoW,
+    h / videoH
+  );
+
+  const displayedW = videoW * scale;
+  const displayedH = videoH * scale;
+
+  const offsetX =
+    (w - displayedW) / 2;
+
+  const offsetY =
+    (h - displayedH) / 2;
+
+
+  Object.keys(pose || {}).forEach(key => {
+
+    const point = pose[key];
+
+    if (!point || point.length < 2) {
+      P[key] = null;
+      return;
+    }
+
+    P[key] = [
+      point[0] * displayedW + offsetX,
+      point[1] * displayedH + offsetY
+    ];
+  });
+
+  return P;
+}
 
 
   function validPoint(P, name) {
