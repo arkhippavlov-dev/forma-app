@@ -1251,13 +1251,16 @@ function recordLoop(){
 
   if(frame){
 
-    SkeletonRenderer.drawUser(
-      ctx,
-      canvas.width,
-      canvas.height,
-      frame.keypoints,
-      {}
-    );
+    window.__formaVideoWidth = video.videoWidth;
+   window.__formaVideoHeight = video.videoHeight;
+
+SkeletonRenderer.drawUser(
+  ctx,
+  canvas.width,
+  canvas.height,
+  frame.keypoints,
+  {}
+);
 
 
     // Store real points.
