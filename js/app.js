@@ -304,53 +304,126 @@ function runFrameCheck(){
 function startCheckScreen(){ go('s-check'); }
 
 // ================= RECORDING =================
-function startRecording(){
-  go('s-record');
-  attachCamera(document.getElementById('recvideo'),'rec','environment','recnoperm');
-  document.getElementById('recExName').textContent = currentExercise.name;
+async function startRecording(){
 
-  const targetReps = 5 + Math.floor(Math.random()*2);
-  recState = { startTime: Date.now(), reps: [], repFrames: {}, repIndex: 0, targetReps, t:0, finished:false };
+  try {
 
-  const canvas = document.getElementById('reccanvas');
-  function resize(){ canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
-  resize(); window.addEventListener('resize', resize);
+    go('s-record');
 
-  recState.raf = requestAnimationFrame(recordLoop);
-  recState.timerInt = setInterval(()=>{
-    const s = Math.floor((Date.now()-recState.startTime)/1000);
-    document.getElementById('recTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-  }, 250);
+    const video = document.getElementById('recvideo');
+
+    await attachCamera(video, 'rec');
+
+    document.getElementById('recExName').textContent =
+      currentExercise.name;
+
+    // Загружаем настоящий Pose Landmarker
+    await PoseEstimationService.init();
+
+    recState = {
+      startTime: Date.now(),
+      reps: [],
+      repFrames: {},
+      repIndex: 0,
+      t: 0,
+      finished: false
+    };
+
+    const canvas = document.getElementById('reccanvas');
+
+    function resize(){
+
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+
+    }
+
+    resize();
+
+    window.addEventListener('resize', resize);
+
+    recState.raf = requestAnimationFrame(recordLoop);
+
+    recState.timerInt = setInterval(() => {
+
+      const s =
+        Math.floor(
+          (Date.now() - recState.startTime) / 1000
+        );
+
+      document.getElementById('recTimer').textContent =
+        String(Math.floor(s / 60)).padStart(2, '0')
+        + ':'
+        + String(s % 60).padStart(2, '0');
+
+    }, 250);
+
+  } catch (error) {
+
+    console.error("FORMA Pose Error:", error);
+
+    alert(
+      "Не удалось запустить распознавание позы.\n\n" +
+      error.message
+    );
+
+  }
+
 }
 
 const LOOP_FPS_CAP = 30; // plenty smooth for a stick-figure overlay, much easier on an iPhone's battery than 60/120fps
-function recordLoop(ts){
-  if(!recState || recState.finished) return;
-  recState.raf = requestAnimationFrame(recordLoop);
-  if(pageHidden) return; // don't do any work while the tab/app is backgrounded
-  if(recState.lastTs===undefined) recState.lastTs = ts;
-  const dt = (ts - recState.lastTs)/1000;
-  if(dt < 1/LOOP_FPS_CAP) return;
-  recState.lastTs = ts;
+function recordLoop(){
 
-  const canvas = document.getElementById('reccanvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  recState.t += dt; // real elapsed time, so the movement speed doesn't depend on frame rate
-
-  const frame = PoseEstimationService.estimateFrame(currentExercise.id, recState.t, recState.repIndex);
-  SkeletonRenderer.drawUser(ctx, canvas.width, canvas.height, frame.keypoints, frame.segColors);
-
-  if(!recState.repFrames[recState.repIndex]) recState.repFrames[recState.repIndex] = [];
-  recState.repFrames[recState.repIndex].push({ keypoints: frame.keypoints, segColors: frame.segColors, cyclePos: frame.cyclePos });
-
-  if(frame.repJustCompleted){
-    const { score, issues } = BiomechanicsEngine.evaluateRep(currentExercise, frame.metrics);
-    recState.reps.push({ index: recState.repIndex+1, score, issues, snapshot: captureSnapshotDataUrl() });
-    recState.repIndex++;
-    document.getElementById('repCount').textContent = recState.repIndex;
-    if(recState.repIndex >= recState.targetReps){ setTimeout(()=>stopRecording(), 500); return; }
+  if (!recState || recState.finished) {
+    return;
   }
+
+  const canvas =
+    document.getElementById('reccanvas');
+
+  const ctx =
+    canvas.getContext('2d');
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const video =
+    document.getElementById('recvideo');
+
+  // Получаем настоящий скелет
+  const frame =
+    PoseEstimationService.estimateFrame(video);
+
+  if (frame) {
+
+    SkeletonRenderer.drawUser(
+      ctx,
+      canvas.width,
+      canvas.height,
+      frame.keypoints,
+      {}
+    );
+
+    // Пока просто сохраняем реальные точки.
+    // Анализ повторений подключим следующим этапом.
+
+    if (!recState.repFrames[0]) {
+      recState.repFrames[0] = [];
+    }
+
+    recState.repFrames[0].push({
+      keypoints: frame.keypoints,
+      visibility: frame.visibility
+    });
+
+  }
+
+  recState.raf =
+    requestAnimationFrame(recordLoop);
 }
 
 function captureSnapshotDataUrl(){
