@@ -194,24 +194,38 @@ async function attachCamera(videoEl, key, facing, noPermId){
       stopCameraStream(streamRegistry[key]);
 
       // Attach new stream.
-      videoEl.srcObject = stream;
+videoEl.srcObject = stream;
 
-      // Mirror only front camera.
-      videoEl.classList.toggle(
-        'mirror',
-        facing === 'user'
-      );
+// Mirror front camera.
+const shouldMirror = facing === 'user';
 
-      // iPhone sometimes requires explicit play().
-      try{
-        await videoEl.play();
-      }catch(e){
-        // autoplay attribute should normally handle this
-      }
+videoEl.classList.toggle(
+  'mirror',
+  shouldMirror
+);
 
-      streamRegistry[key] = stream;
+// Mirror canvas together with video.
+const canvasEl = videoEl.parentElement
+  ? videoEl.parentElement.querySelector('canvas')
+  : null;
 
-      return true;
+if(canvasEl){
+  canvasEl.classList.toggle(
+    'mirror',
+    shouldMirror
+  );
+}
+
+// iPhone sometimes requires explicit play().
+try{
+  await videoEl.play();
+}catch(e){
+  // autoplay attribute should normally handle this
+}
+
+streamRegistry[key] = stream;
+
+return true;
 
     }catch(e){
 
