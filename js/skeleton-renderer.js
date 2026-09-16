@@ -209,10 +209,12 @@ const SkeletonRenderer = (function () {
     if (!ctx || !pose) return;
 
     const P = toPx(
-      pose,
-      w,
-      h
-    );
+  pose,
+  w,
+  h,
+  window.__formaVideoWidth,
+  window.__formaVideoHeight
+);
 
     /*
       Head
@@ -299,10 +301,12 @@ const SkeletonRenderer = (function () {
     if (!ctx || !pose) return;
 
     const P = toPx(
-      pose,
-      w,
-      h
-    );
+  pose,
+  w,
+  h,
+  window.__formaVideoWidth,
+  window.__formaVideoHeight
+);
 
     const optimalColor =
       cssVar('--optimal') || '#7C6CFF';
