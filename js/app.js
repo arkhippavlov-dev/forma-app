@@ -1254,17 +1254,11 @@ function recordLoop(){
     window.__formaVideoWidth = video.videoWidth;
    window.__formaVideoHeight = video.videoHeight;
 
-const mirroredKeypoints = frame.keypoints.map(point => ({
-  ...point,
-  x: 1 - point.x
-}));
-
-SkeletonRenderer.drawUser(
-  ctx,
-  canvas.width,
-  canvas.height,
-  mirroredKeypoints,
-  {}
+SkeletonRenderer.drawUser (
+ctx,
+canvas.width, canvas.height,
+frame. keypoints,
+{}
 );
 
 
@@ -1277,14 +1271,13 @@ SkeletonRenderer.drawUser(
 
 
     recState.repFrames[0].push({
-
-  keypoints:
-    mirroredKeypoints,
-
-  visibility:
-    frame.visibility
-
-});
+       keypoints:
+          frame.keypoints,
+       
+       visibility:
+          frame.visibility
+       
+    });
 
   }
 
