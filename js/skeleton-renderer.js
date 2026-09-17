@@ -129,9 +129,9 @@ const SkeletonRenderer = (function () {
     }
 
     P[key] = [
-      point[0] * displayedW + offsetX,
-      point[1] * displayedH + offsetY
-    ];
+  (1 - point[0]) * displayedW + offsetX,
+  point[1] * displayedH + offsetY
+];
   });
 
   return P;
