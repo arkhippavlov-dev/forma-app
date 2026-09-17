@@ -76,15 +76,15 @@ const PoseEstimationService = (function () {
   function mapLandmarks(landmarks) {
 
     const get = (index) => {
-      const p = landmarks[index];
+  const p = landmarks[index];
 
-      if (!p) return null;
+  if (!p) return null;
 
-      return [
-        p.x,
-        p.y
-      ];
-    };
+  return [
+    1 - p.x,
+    p.y
+  ];
+};
 
     return {
       head: get(LANDMARKS.NOSE),
