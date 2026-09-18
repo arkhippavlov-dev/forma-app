@@ -195,6 +195,14 @@ async function attachCamera(videoEl, key, facing, noPermId){
 
       // Attach new stream.
       videoEl.srcObject = stream;
+       videoEl.onloadedmetadata = () => {
+  console.log(
+    'REAL CAMERA SIZE:',
+    videoEl.videoWidth,
+    'x',
+    videoEl.videoHeight
+  );
+};
 
       // Mirror only front camera.
       videoEl.classList.toggle(
