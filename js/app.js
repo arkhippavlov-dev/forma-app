@@ -1096,18 +1096,28 @@ async function startRecording(){
       'user',
       'recnoperm'
     );
-     
-console.log(
-  "VIDEO SIZE:",
-  video.videoWidth,
-  video.videoHeight
-);
+     const debugInfo = document.createElement('div');
 
-console.log(
-  "SCREEN SIZE:",
-  video.clientWidth,
-  video.clientHeight
-);
+debugInfo.style.cssText = `
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 99999;
+  background: rgba(0,0,0,0.85);
+  color: #00ff00;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: monospace;
+`;
+
+debugInfo.innerHTML = `
+  VIDEO: ${video.videoWidth} × ${video.videoHeight}<br>
+  DISPLAY: ${video.clientWidth} × ${video.clientHeight}
+`;
+
+document.body.appendChild(debugInfo);
+     
 
 
     document.getElementById(
