@@ -1096,6 +1096,18 @@ async function startRecording(){
       'user',
       'recnoperm'
     );
+     
+console.log(
+  "VIDEO SIZE:",
+  video.videoWidth,
+  video.videoHeight
+);
+
+console.log(
+  "SCREEN SIZE:",
+  video.clientWidth,
+  video.clientHeight
+);
 
 
     document.getElementById(
