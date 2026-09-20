@@ -1278,6 +1278,14 @@ const squatResult = SquatDetector.update(
 );
 
 window.__formaSquatResult = squatResult;
+     const captureResult = RepCapture.update(
+  squatResult,
+  frame.keypoints,
+  frame.visibility,
+  performance.now()
+);
+
+window.__formaCaptureResult = captureResult;
      // Update visible rep counter.
 const repCountEl = document.getElementById('repCount');
 
