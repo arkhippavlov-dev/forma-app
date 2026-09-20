@@ -1332,11 +1332,45 @@ const kneeText =
     ? `${Math.round(squatResult.kneeAngle)}°`
     : '—';
 
+const capturedCount =
+  captureResult.completedReps.length;
+
+const lastRep =
+  capturedCount > 0
+    ? captureResult.completedReps[capturedCount - 1]
+    : null;
+
+const lastRepTime =
+  lastRep && Number.isFinite(lastRep.durationMs)
+    ? (lastRep.durationMs / 1000).toFixed(2) + 's'
+    : '—';
+
+const lastRepMinKnee =
+  lastRep && Number.isFinite(lastRep.minKneeAngle)
+    ? Math.round(lastRep.minKneeAngle) + '°'
+    : '—';
+
+const lastRepFrames =
+  lastRep
+    ? lastRep.frameCount
+    : '—';
+
+
 squatHud.innerHTML = `
   <b>FORMA SQUAT</b><br>
+
   REPS: ${squatResult.reps}<br>
+  CAPTURED: ${capturedCount}<br>
+
   STATE: ${squatResult.state}<br>
-  KNEE: ${kneeText}
+  KNEE: ${kneeText}<br>
+
+  <br>
+
+  <b>LAST REP</b><br>
+  TIME: ${lastRepTime}<br>
+  MIN KNEE: ${lastRepMinKnee}<br>
+  FRAMES: ${lastRepFrames}
 `;
 
 
