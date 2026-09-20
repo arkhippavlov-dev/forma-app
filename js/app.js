@@ -1273,6 +1273,12 @@ const squatResult = SquatDetector.update(
 );
 
 window.__formaSquatResult = squatResult;
+     // Update visible rep counter.
+const repCountEl = document.getElementById('repCount');
+
+if (repCountEl) {
+  repCountEl.textContent = squatResult.reps;
+}
      // ============================================================
 // SQUAT DEBUG HUD
 // Temporary live information for testing on iPhone.
