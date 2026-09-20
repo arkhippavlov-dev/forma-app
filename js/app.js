@@ -1258,10 +1258,21 @@ function recordLoop(){
 
 SkeletonRenderer.drawUser (
 ctx,
-canvas.width, canvas.height,
+canvas.width, 
+canvas.height,
 frame. keypoints,
 {}
 );
+     // ============================================================
+// REAL SQUAT REP DETECTION
+// ============================================================
+
+const squatResult = SquatDetector.update(
+  frame.keypoints,
+  frame.visibility
+);
+
+window.__formaSquatResult = squatResult;
 
 
     // Store real points.
