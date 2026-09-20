@@ -1125,6 +1125,8 @@ async function startRecording(){
       finished: false
 
     };
+     SquatDetector.reset();
+     RepCapture.reset();
      const repCountEl = document.getElementById('repCount');
 
 if (repCountEl) {
