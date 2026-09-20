@@ -1125,6 +1125,11 @@ async function startRecording(){
       finished: false
 
     };
+     const repCountEl = document.getElementById('repCount');
+
+if (repCountEl) {
+  repCountEl.textContent = '0';
+}
 
 
     const canvas =
