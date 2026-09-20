@@ -1273,6 +1273,50 @@ const squatResult = SquatDetector.update(
 );
 
 window.__formaSquatResult = squatResult;
+     // ============================================================
+// SQUAT DEBUG HUD
+// Temporary live information for testing on iPhone.
+// ============================================================
+
+let squatHud = document.getElementById('forma-squat-hud');
+
+if (!squatHud) {
+  squatHud = document.createElement('div');
+  squatHud.id = 'forma-squat-hud';
+
+  squatHud.style.cssText = `
+    position: fixed;
+    top: 70px;
+    left: 16px;
+    z-index: 99999;
+
+    background: rgba(0, 0, 0, 0.82);
+    color: white;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+
+    pointer-events: none;
+  `;
+
+  document.body.appendChild(squatHud);
+}
+
+const kneeText =
+  Number.isFinite(squatResult.kneeAngle)
+    ? `${Math.round(squatResult.kneeAngle)}°`
+    : '—';
+
+squatHud.innerHTML = `
+  <b>FORMA SQUAT</b><br>
+  REPS: ${squatResult.reps}<br>
+  STATE: ${squatResult.state}<br>
+  KNEE: ${kneeText}
+`;
 
 
     // Store real points.
