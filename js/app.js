@@ -151,13 +151,16 @@ async function attachCamera(videoEl, key, facing, noPermId){
   }
 
   const videoConstraints = {
-    width: {
-      ideal: 720
-    },
-    height: {
-      ideal: 1280
-    }
-  };
+  width: {
+    ideal: 720
+  },
+  height: {
+    ideal: 960
+  },
+  aspectRatio: {
+    ideal: 0.75
+  }
+};
 
   // First try exact requested camera.
   // Then a softer request.
