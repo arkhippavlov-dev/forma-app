@@ -1350,7 +1350,7 @@ const lastRep =
     ? captureResult.completedReps[capturedCount - 1]
     : null;
 
-const lastRepTime =
+     const lastRepTime =
   lastRep && Number.isFinite(lastRep.durationMs)
     ? (lastRep.durationMs / 1000).toFixed(2) + 's'
     : '—';
@@ -1363,6 +1363,20 @@ const lastRepMinKnee =
 const lastRepFrames =
   lastRep
     ? lastRep.frameCount
+    : '—';
+
+
+// ============================================================
+// SQUAT DEPTH DEBUG
+// ============================================================
+
+const depthAnalysis =
+  window.__formaLastSquatAnalysis?.depth;
+
+const depthText =
+  depthAnalysis &&
+  Number.isFinite(depthAnalysis.depthValue)
+    ? depthAnalysis.depthValue.toFixed(3)
     : '—';
 
 
@@ -1380,6 +1394,7 @@ squatHud.innerHTML = `
   <b>LAST REP</b><br>
   TIME: ${lastRepTime}<br>
   MIN KNEE: ${lastRepMinKnee}<br>
+  DEPTH: ${depthText}<br>
   FRAMES: ${lastRepFrames}
 `;
 
