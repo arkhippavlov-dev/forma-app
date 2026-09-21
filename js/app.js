@@ -1127,6 +1127,7 @@ async function startRecording(){
     };
      SquatDetector.reset();
      RepCapture.reset();
+     PoseStabilizer.reset();
      const repCountEl = document.getElementById('repCount');
 
 if (repCountEl) {
@@ -1259,6 +1260,19 @@ function recordLoop(){
 
 
   if(frame){
+     const stableKeypoints =
+  PoseStabilizer.update(
+    frame.keypoints,
+    frame.visibility,
+    performance.now()
+  );
+
+if (!stableKeypoints) {
+  recState.raf =
+    requestAnimationFrame(recordLoop);
+
+  return;
+}
 
     window.__formaVideoWidth = video.videoWidth;
    window.__formaVideoHeight = video.videoHeight;
@@ -1282,7 +1296,7 @@ const squatResult = SquatDetector.update(
 window.__formaSquatResult = squatResult;
      const captureResult = RepCapture.update(
   squatResult,
-  frame.keypoints,
+  stableKeypoints,
   frame.visibility,
   performance.now()
 );
