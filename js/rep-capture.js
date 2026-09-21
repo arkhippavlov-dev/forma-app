@@ -67,16 +67,42 @@ const RepCapture = (function () {
     return out;
   }
 
-  function makeSnapshot(detectorResult, pose, t) {
-    return {
-      t: t,
-      state: detectorResult.state || null,
-      kneeAngle: numOrNull(detectorResult.kneeAngle),
-      leftKneeAngle: numOrNull(detectorResult.leftKneeAngle),
-      rightKneeAngle: numOrNull(detectorResult.rightKneeAngle),
-      pose: clonePose(pose)
-    };
+  function cloneVisibility(visibility) {
+  if (!visibility) return null;
+
+  const out = {};
+
+  for (const key in visibility) {
+    if (!Object.prototype.hasOwnProperty.call(visibility, key)) {
+      continue;
+    }
+
+    const value = visibility[key];
+
+    out[key] = Number.isFinite(value)
+      ? value
+      : null;
   }
+
+  return out;
+}
+
+
+function makeSnapshot(detectorResult, pose, visibility, t) {
+  return {
+    t: t,
+
+    state: detectorResult.state || null,
+
+    kneeAngle: numOrNull(detectorResult.kneeAngle),
+    leftKneeAngle: numOrNull(detectorResult.leftKneeAngle),
+    rightKneeAngle: numOrNull(detectorResult.rightKneeAngle),
+
+    pose: clonePose(pose),
+
+    visibility: cloneVisibility(visibility)
+  };
+}
 
   function startRep(t) {
     return {
@@ -180,7 +206,12 @@ const RepCapture = (function () {
       if (ka !== null) {
         if (ka < currentRep.minKneeAngle) {
           currentRep.minKneeAngle = ka;
-          currentRep.bottomFrame = makeSnapshot(dr, pose, t); // deepest point so far
+          currentRep.bottomFrame = makeSnapshot(
+  dr,
+  pose,
+  visibility,
+  t
+); // deepest point so far
         }
         if (ka > currentRep.maxKneeAngle) currentRep.maxKneeAngle = ka;
       }
@@ -198,7 +229,14 @@ const RepCapture = (function () {
       const sampleIntervalMs = 1000 / CONFIG.sampleRateHz;
       if (currentRep.frames.length < CONFIG.maxFramesPerRep &&
           (currentRep.lastSampleTime === null || (t - currentRep.lastSampleTime) >= sampleIntervalMs)) {
-        currentRep.frames.push(makeSnapshot(dr, pose, t));
+        currentRep.frames.push(
+  makeSnapshot(
+    dr,
+    pose,
+    visibility,
+    t
+  )
+);
         currentRep.lastSampleTime = t;
       }
 
