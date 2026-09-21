@@ -1288,6 +1288,16 @@ window.__formaSquatResult = squatResult;
 );
 
 window.__formaCaptureResult = captureResult;
+     if (captureResult.newRep) {
+
+  const squatAnalysis =
+    SquatAnalysisService.analyze(
+      captureResult.newRep
+    );
+
+  window.__formaLastSquatAnalysis =
+    squatAnalysis;
+}
      // Update visible rep counter.
 const repCountEl = document.getElementById('repCount');
 
