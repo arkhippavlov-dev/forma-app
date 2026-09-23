@@ -1,32 +1,20 @@
 /* ============================================================
    FORMA — POSE STABILIZER V0.2
-   Model-independent temporal filtering of FORMA 2D keypoints.
-
-   update(pose, visibility, timestampMs) returns display keypoints.
-   getVisibility() returns matching reliability for analysis:
-   a held/rejected point is drawable, but has reliability zero.
-
-   Projected limb lengths may change with viewing angle. Only
-   abrupt relative changes are questioned, never clamped to a
-   fixed anatomy template. Consistency is not proof of accuracy.
    ============================================================ */
 
 const PoseStabilizer = (function () {
   const CONFIG = {
-    // A little more filtering removes fine jitter without adding a visible
-    // delay on a phone camera. Large normal arm movements are handled below
-    // without being frozen while this filter catches up.
-    smoothing: 0.50,
+    smoothing: 0.55,
     minVisibility: 0.35,
     maxJump: 0.18,
     holdMs: 350,
-    confirmFrames: 2,
-    confirmMs: 32,
+    confirmFrames: 3,
+    confirmMs: 60,
     maxCandidateGapMs: 200,
     jumpBodyRatio: 0.40,
     lengthChangeRatio: 0.45,
     lengthBodyRatio: 0.12,
-    candidateBodyRatio: 0.16
+    candidateBodyRatio: 0.09
   };
 
   const LEGACY_VISIBILITY = {
@@ -55,23 +43,14 @@ const PoseStabilizer = (function () {
     rknee: 'rhip', rankle: 'rknee'
   };
 
-  const ARM_JOINTS = new Set([
-    'lelbow',
-    'lwrist',
-    'relbow',
-    'rwrist'
-  ]);
-
   let state = {};
   let lastTime = null;
   let lastPose = null;
   let effectiveVisibility = {};
 
   function validPoint(p) {
-    return Array.isArray(p) &&
-      p.length >= 2 &&
-      Number.isFinite(p[0]) &&
-      Number.isFinite(p[1]);
+    return Array.isArray(p) && p.length >= 2 &&
+      Number.isFinite(p[0]) && Number.isFinite(p[1]);
   }
 
   function clonePoint(p) {
@@ -90,10 +69,7 @@ const PoseStabilizer = (function () {
     if (!pose) return null;
 
     return Object.fromEntries(
-      Object.entries(pose).map(([key, p]) => [
-        key,
-        clonePoint(p)
-      ])
+      Object.entries(pose).map(([key, p]) => [key, clonePoint(p)])
     );
   }
 
@@ -107,9 +83,7 @@ const PoseStabilizer = (function () {
   }
 
   function visibilityFor(joint, visibility) {
-    const value =
-      visibility?.[joint] ??
-      visibility?.[LEGACY_VISIBILITY[joint]];
+    const value = visibility?.[joint] ?? visibility?.[LEGACY_VISIBILITY[joint]];
 
     if (value === undefined && visibility == null) {
       return 1;
@@ -120,49 +94,8 @@ const PoseStabilizer = (function () {
       : 0;
   }
 
-  // Защита рук при перекрытии с коленями.
-  function hasPlausibleArmGeometry(joint, input, previous) {
-    if (!ARM_JOINTS.has(joint)) return true;
-
-    const parent = PARENT[joint];
-    const previousParent = parent && state[parent];
-    const currentParent = parent && input[parent];
-
-    if (
-      !previous ||
-      !previousParent ||
-      !validPoint(previous.raw) ||
-      !validPoint(previousParent.raw) ||
-      !validPoint(input[joint]) ||
-      !validPoint(currentParent)
-    ) {
-      return true;
-    }
-
-    const oldLength = distance(
-      previous.raw,
-      previousParent.raw
-    );
-
-    const newLength = distance(
-      input[joint],
-      currentParent
-    );
-
-    if (oldLength < 0.015) return true;
-
-    // Ошибочная точка при перекрытии обычно резко удлиняет
-    // или сокращает сегмент руки.
-    return (
-      newLength >= oldLength * 0.45 &&
-      newLength <= oldLength * 1.8
-    );
-  }
-
   function update(pose, visibility, timestamp) {
-    const now = Number.isFinite(timestamp)
-      ? timestamp
-      : performance.now();
+    const now = Number.isFinite(timestamp) ? timestamp : performance.now();
 
     if (lastTime !== null && now < lastTime) {
       reset();
@@ -172,19 +105,11 @@ const PoseStabilizer = (function () {
       return clonePose(lastPose);
     }
 
-    const dt = lastTime === null
-      ? 1000 / 30
-      : now - lastTime;
-
+    const dt = lastTime === null ? 1000 / 30 : now - lastTime;
     lastTime = now;
 
-    const frameFactor = Math.max(
-      0.5,
-      Math.min(3, dt / (1000 / 30))
-    );
-
-    const alpha =
-      1 - Math.pow(1 - CONFIG.smoothing, frameFactor);
+    const frameFactor = Math.max(0.5, Math.min(3, dt / (1000 / 30)));
+    const alpha = 1 - Math.pow(1 - CONFIG.smoothing, frameFactor);
 
     const input = pose || {};
 
@@ -201,9 +126,7 @@ const PoseStabilizer = (function () {
 
     for (const joint of joints) {
       vis[joint] = visibilityFor(joint, visibility);
-
-      reliable[joint] =
-        validPoint(input[joint]) &&
+      reliable[joint] = validPoint(input[joint]) &&
         vis[joint] >= CONFIG.minVisibility;
     }
 
@@ -211,30 +134,20 @@ const PoseStabilizer = (function () {
       state[joint] &&
       now - state[joint].time <= CONFIG.holdMs;
 
-    const lengths = pairs =>
-      pairs.flatMap(([a, b]) => {
-        if (!fresh(a) || !fresh(b)) return [];
+    const lengths = pairs => pairs.flatMap(([a, b]) => {
+      if (!fresh(a) || !fresh(b)) return [];
 
-        const length = distance(
-          state[a].raw,
-          state[b].raw
-        );
-
-        return length > 0.015 ? [length] : [];
-      });
+      const length = distance(state[a].raw, state[b].raw);
+      return length > 0.015 ? [length] : [];
+    });
 
     const torso = lengths([
       ['lshoulder', 'lhip'],
       ['rshoulder', 'rhip']
     ]);
 
-    const limb = torso.length
-      ? torso
-      : lengths(SEGMENTS);
-
-    const bodyScale = limb.length
-      ? median(limb)
-      : 0.25;
+    const limb = torso.length ? torso : lengths(SEGMENTS);
+    const bodyScale = limb.length ? median(limb) : 0.25;
 
     const deltas = [
       'lshoulder',
@@ -243,10 +156,7 @@ const PoseStabilizer = (function () {
       'rhip'
     ]
       .filter(key => reliable[key] && fresh(key))
-      .map(key => subtract(
-        input[key],
-        state[key].raw
-      ));
+      .map(key => subtract(input[key], state[key].raw));
 
     const translation = deltas.length >= 3
       ? [
@@ -258,11 +168,10 @@ const PoseStabilizer = (function () {
     const movement = {};
     const suspect = new Set();
 
-    const jumpLimit =
-      Math.min(
-        CONFIG.maxJump,
-        Math.max(0.025, bodyScale * CONFIG.jumpBodyRatio)
-      ) * frameFactor;
+    const jumpLimit = Math.min(
+      CONFIG.maxJump,
+      Math.max(0.025, bodyScale * CONFIG.jumpBodyRatio)
+    ) * frameFactor;
 
     for (const joint of joints) {
       if (!reliable[joint] || !fresh(joint)) continue;
@@ -278,24 +187,12 @@ const PoseStabilizer = (function () {
     }
 
     for (const [a, b] of SEGMENTS) {
-      if (
-        !reliable[a] ||
-        !reliable[b] ||
-        !fresh(a) ||
-        !fresh(b)
-      ) {
+      if (!reliable[a] || !reliable[b] || !fresh(a) || !fresh(b)) {
         continue;
       }
 
-      const oldLength = distance(
-        state[a].raw,
-        state[b].raw
-      );
-
-      const newLength = distance(
-        input[a],
-        input[b]
-      );
+      const oldLength = distance(state[a].raw, state[b].raw);
+      const newLength = distance(input[a], input[b]);
 
       const tolerance = Math.max(
         0.02,
@@ -307,16 +204,12 @@ const PoseStabilizer = (function () {
         continue;
       }
 
-      const fast =
-        movement[a] > movement[b] ? a : b;
-
-      const slow =
-        fast === a ? b : a;
+      const fast = movement[a] > movement[b] ? a : b;
+      const slow = fast === a ? b : a;
 
       if (
         movement[fast] >
-        movement[slow] * 1.5 +
-        Math.max(0.012, bodyScale * 0.05)
+        movement[slow] * 1.5 + Math.max(0.012, bodyScale * 0.05)
       ) {
         suspect.add(fast);
       }
@@ -328,48 +221,25 @@ const PoseStabilizer = (function () {
     for (const joint of joints) {
       const raw = input[joint];
       const previous = state[joint];
-
-      const age = previous
-        ? now - previous.time
-        : Infinity;
+      const age = previous ? now - previous.time : Infinity;
 
       let accept = reliable[joint];
 
-      const implausibleArm =
-        accept &&
-        !hasPlausibleArmGeometry(
-          joint,
-          input,
-          previous
-        );
+      const needsConfirmation = previous &&
+        (suspect.has(joint) || age > CONFIG.holdMs);
 
-      // Руки не должны подвисать при обычном движении.
-      // Но явно сломанную руку при перекрытии не принимаем.
-      const needsConfirmation =
-        previous &&
-        (
-          age > CONFIG.holdMs ||
-          (
-            !ARM_JOINTS.has(joint) &&
-            suspect.has(joint)
-          )
-        );
-
-      if (!accept || implausibleArm) {
+      if (!accept) {
         if (previous) {
           previous.candidate = null;
         }
-
-        accept = false;
       } else if (needsConfirmation) {
         const parent = PARENT[joint];
 
-        const anchor =
-          parent &&
+        const anchor = parent &&
           reliable[parent] &&
           !suspect.has(parent)
-            ? parent
-            : null;
+          ? parent
+          : null;
 
         const candidatePoint = anchor
           ? subtract(raw, input[anchor])
@@ -382,14 +252,10 @@ const PoseStabilizer = (function () {
           bodyScale * CONFIG.candidateBodyRatio
         );
 
-        const continues =
-          candidate &&
+        const continues = candidate &&
           candidate.anchor === anchor &&
           now - candidate.lastTime <= CONFIG.maxCandidateGapMs &&
-          distance(
-            candidatePoint,
-            candidate.origin
-          ) <= radius;
+          distance(candidatePoint, candidate.origin) <= radius;
 
         previous.candidate = continues
           ? {
@@ -405,22 +271,17 @@ const PoseStabilizer = (function () {
               count: 1
             };
 
-        accept =
-          previous.candidate.count >= CONFIG.confirmFrames &&
+        accept = previous.candidate.count >= CONFIG.confirmFrames &&
           now - previous.candidate.startTime >= CONFIG.confirmMs;
       }
 
       if (accept) {
-        const point =
-          previous && age <= CONFIG.holdMs
-            ? [
-                previous.point[0] +
-                  (raw[0] - previous.point[0]) * alpha,
-
-                previous.point[1] +
-                  (raw[1] - previous.point[1]) * alpha
-              ]
-            : clonePoint(raw);
+        const point = previous && age <= CONFIG.holdMs
+          ? [
+              previous.point[0] + (raw[0] - previous.point[0]) * alpha,
+              previous.point[1] + (raw[1] - previous.point[1]) * alpha
+            ]
+          : clonePoint(raw);
 
         state[joint] = {
           point,
@@ -432,10 +293,9 @@ const PoseStabilizer = (function () {
         result[joint] = clonePoint(point);
         effectiveVisibility[joint] = vis[joint];
       } else {
-        result[joint] =
-          previous && age <= CONFIG.holdMs
-            ? clonePoint(previous.point)
-            : null;
+        result[joint] = previous && age <= CONFIG.holdMs
+          ? clonePoint(previous.point)
+          : null;
 
         effectiveVisibility[joint] = 0;
       }
@@ -444,13 +304,12 @@ const PoseStabilizer = (function () {
     const ls = result.lshoulder;
     const rs = result.rshoulder;
 
-    result.neck =
-      validPoint(ls) && validPoint(rs)
-        ? [
-            (ls[0] + rs[0]) / 2,
-            (ls[1] + rs[1]) / 2
-          ]
-        : null;
+    result.neck = validPoint(ls) && validPoint(rs)
+      ? [
+          (ls[0] + rs[0]) / 2,
+          (ls[1] + rs[1]) / 2
+        ]
+      : null;
 
     effectiveVisibility.neck = Math.min(
       effectiveVisibility.lshoulder,
@@ -458,7 +317,6 @@ const PoseStabilizer = (function () {
     );
 
     lastPose = clonePose(result);
-
     return result;
   }
 
