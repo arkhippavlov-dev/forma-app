@@ -9,7 +9,7 @@
 
 window.FORMA_CONFIG = Object.assign(
   {
-    backendUrl: ''
+    backendUrl: 'https://forma-backend-4w2s.onrender.com'
   },
   window.FORMA_CONFIG || {}
 );
