@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: forma-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: FORMA_ALLOWED_ORIGINS
+        value: "*"
+      - key: FORMA_MAX_UPLOAD_MB
+        value: "80"
